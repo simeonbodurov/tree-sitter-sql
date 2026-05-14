@@ -69,7 +69,7 @@ export default grammar({
               $.statement,
               $.block,
             ),
-            choice(';', '^'),
+            ';',
           ),
         ),
       ),

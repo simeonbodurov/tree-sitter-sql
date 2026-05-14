@@ -249,7 +249,7 @@ export default {
       ['*', 'binary_times'],
       ['/', 'binary_times'],
       ['%', 'binary_times'],
-      // '^' removed: Firebird uses ^ as statement terminator (SET TERM), not as power/XOR
+      ['^', 'binary_exp'],
       ['=', 'binary_relation'],
       ['<', 'binary_relation'],
       ['<=', 'binary_relation'],

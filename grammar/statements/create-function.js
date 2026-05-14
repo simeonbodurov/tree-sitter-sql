@@ -105,8 +105,6 @@ export default {
 
   _tsql_function_body_statement: $ => seq(
     optional($.keyword_as),
-    // Firebird: DECLARE VARIABLE name type; appears before BEGIN
-    repeat($.fb_var_declaration),
     $.keyword_begin,
     optional($.var_declarations),
     choice(
@@ -118,6 +116,23 @@ export default {
       )),
     ),
     $._function_return,
+    $.keyword_end,
+  ),
+
+  _fb_function_body_statement: $ => seq(
+    optional($.keyword_as),
+    repeat1($.fb_var_declaration),
+    $.keyword_begin,
+    optional($.var_declarations),
+    choice(
+      repeat($.statement),
+      repeat1(seq(
+        $.keyword_begin,
+        repeat($.statement),
+        $.keyword_end,
+      )),
+    ),
+    optional($._function_return),
     $.keyword_end,
   ),
 
@@ -177,6 +192,7 @@ export default {
       alias($._dollar_quoted_string_end_tag, $.dollar_quote),
     ),
     $._tsql_function_body_statement,
+    $._fb_function_body_statement,
   ),
 
   function_language: $ => seq(

@@ -83,14 +83,30 @@ export default {
       optional(';'),
       alias($._dollar_quoted_string_end_tag, $.dollar_quote),
     ),
-    // T-SQL / Firebird style (no required RETURN): AS BEGIN ... END
+    // T-SQL style (no required RETURN): AS BEGIN ... END
     $._tsql_procedure_body_statement,
+    // Firebird style: [AS] DECLARE VARIABLE x type; ... BEGIN ... END
+    $._fb_procedure_body_statement,
   ),
 
   _tsql_procedure_body_statement: $ => seq(
     optional($.keyword_as),
-    // Firebird: DECLARE VARIABLE name type; appears before BEGIN
-    repeat($.fb_var_declaration),
+    $.keyword_begin,
+    optional($.var_declarations),
+    choice(
+      repeat($.statement),
+      repeat1(seq(
+        $.keyword_begin,
+        repeat($.statement),
+        $.keyword_end,
+      )),
+    ),
+    $.keyword_end,
+  ),
+
+  _fb_procedure_body_statement: $ => seq(
+    optional($.keyword_as),
+    repeat1($.fb_var_declaration),
     $.keyword_begin,
     optional($.var_declarations),
     choice(
