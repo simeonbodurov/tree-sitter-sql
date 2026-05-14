@@ -9,6 +9,8 @@ export default {
     optional($._if_not_exists),
     $.object_reference,
     optional($.function_arguments),
+    // Firebird output parameters
+    optional(seq($.keyword_returns, $.function_arguments)),
     repeat(
       choice(
         $.function_language,
@@ -81,12 +83,14 @@ export default {
       optional(';'),
       alias($._dollar_quoted_string_end_tag, $.dollar_quote),
     ),
-    // T-SQL style (no required RETURN)
+    // T-SQL / Firebird style (no required RETURN): AS BEGIN ... END
     $._tsql_procedure_body_statement,
   ),
 
   _tsql_procedure_body_statement: $ => seq(
     optional($.keyword_as),
+    // Firebird: DECLARE VARIABLE name type; appears before BEGIN
+    repeat($.fb_var_declaration),
     $.keyword_begin,
     optional($.var_declarations),
     choice(

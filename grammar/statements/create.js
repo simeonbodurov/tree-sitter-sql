@@ -20,6 +20,10 @@ export default {
       $.create_extension,
       $.create_trigger,
       $.create_policy,
+      // Firebird dialect
+      $.create_domain,
+      $.create_exception,
+      $.create_generator,
       prec.left(seq(
         $.create_schema,
         repeat($._create_statement),
@@ -484,38 +488,54 @@ export default {
     optional($._if_not_exists),
     $.object_reference,
     choice(
-      $.keyword_before,
-      $.keyword_after,
-      seq($.keyword_instead, $.keyword_of),
-    ),
-    $._create_trigger_event,
-    repeat(seq($.keyword_or, $._create_trigger_event)),
-    $.keyword_on,
-    $.object_reference,
-    repeat(
-      choice(
-        seq($.keyword_from, $.object_reference),
+      // Firebird: FOR tablename ACTIVE BEFORE/AFTER event [POSITION n] AS
+      seq(
+        $.keyword_for,
+        $.object_reference,
+        optional(choice($.keyword_active, $.keyword_inactive)),
+        choice($.keyword_before, $.keyword_after),
+        $._create_trigger_event,
+        repeat(seq($.keyword_or, $._create_trigger_event)),
+        optional(seq($.keyword_position, $._integer)),
+        $.keyword_as,
+      ),
+      // Standard SQL / PostgreSQL / MySQL / SQLite
+      seq(
         choice(
-          seq($.keyword_not, $.keyword_deferrable),
-          $.keyword_deferrable,
-          seq($.keyword_initially, $.keyword_immediate),
-          seq($.keyword_initially, $.keyword_deferred),
+          $.keyword_before,
+          $.keyword_after,
+          seq($.keyword_instead, $.keyword_of),
         ),
-        seq($.keyword_referencing, choice($.keyword_old, $.keyword_new), $.keyword_table, optional($.keyword_as), $.identifier),
-        seq(
-          $.keyword_for,
-          optional($.keyword_each),
-          choice($.keyword_row, $.keyword_statement),
-          // mariadb
-          optional(seq(choice($.keyword_follows, $.keyword_precedes), $.identifier)),
+        $._create_trigger_event,
+        repeat(seq($.keyword_or, $._create_trigger_event)),
+        $.keyword_on,
+        $.object_reference,
+        repeat(
+          choice(
+            seq($.keyword_from, $.object_reference),
+            choice(
+              seq($.keyword_not, $.keyword_deferrable),
+              $.keyword_deferrable,
+              seq($.keyword_initially, $.keyword_immediate),
+              seq($.keyword_initially, $.keyword_deferred),
+            ),
+            seq($.keyword_referencing, choice($.keyword_old, $.keyword_new), $.keyword_table, optional($.keyword_as), $.identifier),
+            seq(
+              $.keyword_for,
+              optional($.keyword_each),
+              choice($.keyword_row, $.keyword_statement),
+              // mariadb
+              optional(seq(choice($.keyword_follows, $.keyword_precedes), $.identifier)),
+            ),
+            seq($.keyword_when, wrapped_in_parenthesis($._expression)),
+          ),
         ),
-        seq($.keyword_when, wrapped_in_parenthesis($._expression)),
+        $.keyword_execute,
+        choice($.keyword_function, $.keyword_procedure),
+        $.object_reference,
+        paren_list(field('parameter', $.term)),
       ),
     ),
-    $.keyword_execute,
-    choice($.keyword_function, $.keyword_procedure),
-    $.object_reference,
-    paren_list(field('parameter', $.term)),
   ),
 
   _create_trigger_event: $ => choice(
@@ -637,6 +657,37 @@ export default {
         ),
       ),
     ),
+  ),
+
+  // ── Firebird dialect ────────────────────────────────────────────────────────
+
+  // CREATE DOMAIN name [AS] type [DEFAULT literal] [NOT NULL] [CHECK (...)]
+  create_domain: $ => prec.right(seq(
+    $.keyword_create,
+    $.keyword_domain,
+    $.object_reference,
+    optional($.keyword_as),
+    $._type,
+    optional(seq($.keyword_default, $.literal)),
+    optional(seq($.keyword_not, $.keyword_null)),
+    optional(seq($.keyword_check, $.parenthesized_expression)),
+    optional(seq($.keyword_collate, $.identifier)),
+  )),
+
+  // CREATE [OR ALTER] EXCEPTION name 'message'
+  create_exception: $ => seq(
+    $.keyword_create,
+    optional($._or_replace),
+    $.keyword_exception,
+    $.object_reference,
+    alias(choice($._single_quote_string, $._double_quote_string), $.literal),
+  ),
+
+  // CREATE GENERATOR name  (Firebird legacy sequence)
+  create_generator: $ => seq(
+    $.keyword_create,
+    $.keyword_generator,
+    $.object_reference,
   ),
 
 };

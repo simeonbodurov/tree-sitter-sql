@@ -1,0 +1,141 @@
+================================================================================
+SET TERM caret semicolon
+================================================================================
+
+SET TERM ^ ;
+
+--------------------------------------------------------------------------------
+
+(program
+  (set_term))
+
+================================================================================
+SET TERM semicolon caret
+================================================================================
+
+SET TERM ; ^
+
+--------------------------------------------------------------------------------
+
+(program
+  (set_term))
+
+================================================================================
+CREATE EXCEPTION
+================================================================================
+
+CREATE EXCEPTION MY_EXCEPTION 'Something went wrong';
+
+--------------------------------------------------------------------------------
+
+(program
+  (statement
+    (create_exception
+      (keyword_create)
+      (keyword_exception)
+      (object_reference
+        name: (identifier))
+      (literal))))
+
+================================================================================
+CREATE GENERATOR
+================================================================================
+
+CREATE GENERATOR GEN_MYSEQ;
+
+--------------------------------------------------------------------------------
+
+(program
+  (statement
+    (create_generator
+      (keyword_create)
+      (keyword_generator)
+      (object_reference
+        name: (identifier)))))
+
+================================================================================
+CREATE DOMAIN simple
+================================================================================
+
+CREATE DOMAIN D_NAME AS VARCHAR(100) NOT NULL;
+
+--------------------------------------------------------------------------------
+
+(program
+  (statement
+    (create_domain
+      (keyword_create)
+      (keyword_domain)
+      (object_reference
+        name: (identifier))
+      (keyword_as)
+      (varchar
+        (keyword_varchar)
+        size: (literal))
+      (keyword_not)
+      (keyword_null))))
+
+================================================================================
+Firebird trigger: FOR tablename syntax
+================================================================================
+
+CREATE TRIGGER TR_FOO FOR FOO ACTIVE BEFORE INSERT POSITION 0 AS;
+
+--------------------------------------------------------------------------------
+
+(program
+  (statement
+    (create_trigger
+      (keyword_create)
+      (keyword_trigger)
+      (object_reference
+        name: (identifier))
+      (keyword_for)
+      (object_reference
+        name: (identifier))
+      (keyword_active)
+      (keyword_before)
+      (keyword_insert)
+      (keyword_position)
+      (keyword_as))))
+
+================================================================================
+SET TERM with CREATE TABLEs on both sides
+================================================================================
+
+CREATE TABLE Before_Table (ID INT NOT NULL);
+SET TERM ^ ;
+SET TERM ; ^
+CREATE TABLE After_Table (ID INT NOT NULL);
+
+--------------------------------------------------------------------------------
+
+(program
+  (statement
+    (create_table
+      (keyword_create)
+      (keyword_table)
+      (object_reference
+        name: (identifier))
+      (column_definitions
+        (column_definition
+          name: (identifier)
+          type: (int
+            (keyword_int))
+          (keyword_not)
+          (keyword_null)))))
+  (set_term)
+  (set_term)
+  (statement
+    (create_table
+      (keyword_create)
+      (keyword_table)
+      (object_reference
+        name: (identifier))
+      (column_definitions
+        (column_definition
+          name: (identifier)
+          type: (int
+            (keyword_int))
+          (keyword_not)
+          (keyword_null))))))

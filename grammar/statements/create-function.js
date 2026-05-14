@@ -105,6 +105,8 @@ export default {
 
   _tsql_function_body_statement: $ => seq(
     optional($.keyword_as),
+    // Firebird: DECLARE VARIABLE name type; appears before BEGIN
+    repeat($.fb_var_declaration),
     $.keyword_begin,
     optional($.var_declarations),
     choice(

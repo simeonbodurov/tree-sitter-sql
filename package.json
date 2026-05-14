@@ -16,7 +16,8 @@
   "license": "MIT",
   "dependencies": {
     "node-addon-api": "^7.1.0",
-    "node-gyp-build": "^4.8.0"
+    "node-gyp-build": "^4.8.0",
+    "tree-sitter-cli": "^0.26.8"
   },
   "devDependencies": {
     "commit-and-tag-version": "^12.0.0",

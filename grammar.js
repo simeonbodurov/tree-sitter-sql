@@ -56,14 +56,21 @@ export default grammar({
   rules: {
     program: $ => seq(
       // any number of transactions, statements, or blocks with a terminating ;
+      // set_term and declare_external_function are self-terminating (Firebird dialect)
+      // '^' is a valid statement terminator in Firebird (after SET TERM ^ ;)
       repeat(
-        seq(
-          choice(
-            $.transaction,
-            $.statement,
-            $.block,
+        choice(
+          $.set_term,
+          $.declare_external_function,
+          $.fb_proc_or_trigger,
+          seq(
+            choice(
+              $.transaction,
+              $.statement,
+              $.block,
+            ),
+            choice(';', '^'),
           ),
-          ';',
         ),
       ),
       // optionally, a single statement without a terminating ;

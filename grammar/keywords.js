@@ -426,4 +426,18 @@ export default {
 
   keyword_array: _ => make_keyword("array"), // not included in _type since it's a constructor literal
 
+  // Firebird dialect keywords
+  keyword_term:        _ => make_keyword("term"),
+  keyword_domain:      _ => make_keyword("domain"),
+  keyword_exception:   _ => make_keyword("exception"),
+  keyword_generator:   _ => make_keyword("generator"),
+  keyword_active:      _ => make_keyword("active"),
+  keyword_inactive:    _ => make_keyword("inactive"),
+  keyword_position:    _ => make_keyword("position"),
+  keyword_suspend:     _ => make_keyword("suspend"),
+  keyword_exit:        _ => make_keyword("exit"),
+  keyword_variable:    _ => make_keyword("variable"),
+  keyword_entry_point: _ => make_keyword("entry_point"),
+  keyword_module_name: _ => make_keyword("module_name"),
+
 }
