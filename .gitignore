@@ -1,5 +1,6 @@
 ## Custom
 
+local_test/
 tmp/
 Cargo.lock
 node_modules
