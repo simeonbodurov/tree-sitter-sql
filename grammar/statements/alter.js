@@ -287,7 +287,10 @@ export default {
               field("option", $.identifier),
             )),
         ),
-      )
+      ),
+      // Firebird: ALTER ROLE name SET AUTO ADMIN MAPPING [ON|OFF]
+      seq($.keyword_set, $.identifier, $.identifier, $.identifier,
+          optional(choice($.keyword_on, $.keyword_off))),
     ),
   )),
 

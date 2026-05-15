@@ -104,6 +104,7 @@ export default {
   keyword_engine: _ => make_keyword("engine"),
   keyword_default: _ => make_keyword("default"),
   keyword_cascade: _ => make_keyword("cascade"),
+  keyword_computed: _ => make_keyword("computed"),
   keyword_restrict: _ => make_keyword("restrict"),
   keyword_with: _ => make_keyword("with"),
   keyword_without: _ => make_keyword("without"),
@@ -439,5 +440,13 @@ export default {
   keyword_variable:    _ => make_keyword("variable"),
   keyword_entry_point: _ => make_keyword("entry_point"),
   keyword_module_name: _ => make_keyword("module_name"),
+  keyword_ascending:   _ => make_keyword("ascending"),
+  keyword_descending:  _ => make_keyword("descending"),
+  keyword_dialect:     _ => make_keyword("dialect"),
+  keyword_sql:         _ => make_keyword("sql"),
+  keyword_work:        _ => make_keyword("work"),
+  keyword_global:      _ => make_keyword("global"),
+  keyword_preserve:    _ => make_keyword("preserve"),
+  keyword_rows:        _ => make_keyword("rows"),
 
 }

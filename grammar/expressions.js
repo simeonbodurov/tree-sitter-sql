@@ -57,7 +57,7 @@ export default {
       field('name', $.identifier),
     ),
 
-  parameter: $ => /\?|(\$[0-9]+)/,
+  parameter: $ => /\?|(\$[0-9]+)|(:[A-Za-z_][0-9A-Za-z_]*)/,
 
   case: $ => seq(
     $.keyword_case,
@@ -149,6 +149,25 @@ export default {
             ),
             $.keyword_from,
             $.term
+          )
+        ),
+        // Firebird DATEADD: DATEADD(quantity unit TO date)
+        wrapped_in_parenthesis(
+          seq(
+            field('parameter', $.term),
+            field('unit', $.object_reference),
+            $.keyword_to,
+            field('date', $.term),
+          )
+        ),
+        // Firebird/SQL SUBSTRING(expr FROM pos FOR len) — FOR required to avoid conflict with EXTRACT
+        wrapped_in_parenthesis(
+          seq(
+            field('parameter', $.term),
+            $.keyword_from,
+            field('start', $.term),
+            $.keyword_for,
+            field('length', $.term),
           )
         ),
         // _aggregate_function, e.g. group_concat
@@ -360,7 +379,13 @@ export default {
     $._dml_read
   ),
 
-  list: $ => paren_list($._expression),
+  list: $ => seq(
+    '(',
+    $._expression,
+    repeat(seq(',', $._expression)),
+    optional(','),
+    ')',
+  ),
 
   literal: $ => prec(2,
     choice(
@@ -415,8 +440,8 @@ export default {
     seq("`", $._identifier, "`"),
   ),
   _tsql_parameter: $ => seq('@', $._identifier),
-  // support nordic chars and umlaue
-  _identifier: _ => /[A-Za-z_\u00C0-\u017F][0-9A-Za-z_\u00C0-\u017F]*/,
+  // support nordic chars, umlauts, and Firebird $ in identifiers (e.g. REC$LastChanged)
+  _identifier: _ => /[A-Za-z_\u00C0-\u017F][0-9A-Za-z_$\u00C0-\u017F]*/,
 
   object_id: $ => seq(
     $.keyword_object_id,

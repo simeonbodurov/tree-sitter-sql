@@ -22,11 +22,24 @@ export default {
     ')',
   ),
 
-  column_definition: $ => prec.left(seq(
-    field('name', $._column),
-    field('type', $._type),
-    repeat($._column_constraint),
-  )),
+  column_definition: $ => prec.left(
+    choice(
+      // Firebird COMPUTED [BY] (expression) column — no explicit type
+      prec(5, seq(
+        field('name', $._column),
+        $.keyword_computed,
+        optional($.keyword_by),
+        wrapped_in_parenthesis($._expression),
+        repeat($._column_constraint),
+      )),
+      // Normal column: name type [constraints...]
+      seq(
+        field('name', $._column),
+        field('type', $._type),
+        repeat($._column_constraint),
+      ),
+    )
+  ),
 
   _column_comment: $ => seq(
     $.keyword_comment,
@@ -74,7 +87,13 @@ export default {
       $.keyword_stored,
       $.keyword_virtual,
     ),
-    $.keyword_unique
+    $.keyword_unique,
+    // Firebird: CHARACTER SET <charset> on VARCHAR/CHAR columns
+    seq($.keyword_character, $.keyword_set, $.identifier),
+    // Firebird: COLLATE <collation>
+    seq($.keyword_collate, $.identifier),
+    // Firebird: COMPUTED [BY] (expression) — optional after explicit type
+    seq($.keyword_computed, optional($.keyword_by), wrapped_in_parenthesis($._expression)),
   )),
 
   _check_constraint: $ => seq(
@@ -85,7 +104,7 @@ export default {
       )
     ),
     $.keyword_check,
-    wrapped_in_parenthesis($.binary_expression)
+    wrapped_in_parenthesis($._expression)
   ),
 
   _default_expression: $ => seq(
@@ -119,6 +138,14 @@ export default {
     $._check_constraint
   ),
 
+  // Firebird: USING [ASC|DESC|ASCENDING|DESCENDING] INDEX indexname
+  _fb_using_index: $ => seq(
+    $.keyword_using,
+    optional(choice($.keyword_ascending, $.keyword_descending, $.direction)),
+    $.keyword_index,
+    $.identifier,
+  ),
+
   _constraint_literal: $ => seq(
     $.keyword_constraint,
     field('name', $.identifier),
@@ -126,16 +153,47 @@ export default {
       seq(
         $._primary_key,
         $.ordered_columns,
+        optional($._fb_using_index),
       ),
       seq(
         $._check_constraint
-      )
+      ),
+      // Firebird/MySQL: CONSTRAINT name FOREIGN KEY (cols) REFERENCES table (cols) ON DELETE/UPDATE ...
+      seq(
+        optional($.keyword_foreign),
+        $.keyword_key,
+        $.ordered_columns,
+        optional(
+          seq(
+            $.keyword_references,
+            $.object_reference,
+            paren_list($.identifier, true),
+            repeat(
+              seq(
+                $.keyword_on,
+                choice($.keyword_delete, $.keyword_update),
+                choice(
+                  seq($.keyword_no, $.keyword_action),
+                  $.keyword_restrict,
+                  $.keyword_cascade,
+                  seq($.keyword_set, choice($.keyword_null, $.keyword_default),
+                    optional(paren_list($.identifier, true))),
+                ),
+              ),
+            ),
+          ),
+        ),
+        optional($._fb_using_index),
+      ),
+      // CONSTRAINT name UNIQUE (cols)
+      seq($.keyword_unique, $.ordered_columns, optional($._fb_using_index)),
     )
   ),
 
   _primary_key_constraint: $ => seq(
     $._primary_key,
     $.ordered_columns,
+    optional($._fb_using_index),
   ),
 
   _key_constraint: $ => seq(

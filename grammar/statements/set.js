@@ -13,6 +13,16 @@ export default {
   // with CSTRING, BY VALUE, NULL, RETURNS, etc. which are not in the SQL grammar.
   declare_external_function: _ => /DECLARE[ \t\n\r]+EXTERNAL[ \t\n\r]+FUNCTION[^;]+;/i,
 
+  // Firebird script-level statements with no structured grammar equivalent.
+  // Each is self-terminating (consumes the trailing semicolon).
+  fb_connect_statement: _ => /CONNECT\s+'[^']*'\s+[^;]+;/i,
+  // Firebird UPDATE OR INSERT (upsert): self-terminating leaf token.
+  fb_update_or_insert: _ => /UPDATE[ \t\r\n]+OR[ \t\r\n]+INSERT[ \t\r\n]+[^;]+;/i,
+  // Firebird GRANT/REVOKE: self-terminating leaf token absorbs all privilege grants/revocations.
+  fb_grant_revoke: _ => /(?:GRANT|REVOKE)[ \t][^;]+;/i,
+  fb_set_generator: _ => /SET\s+GENERATOR\s+\w+\s+TO\s+[^;]+;/i,
+  fb_set_auto_admin: _ => /SET\s+AUTO\s+ADMIN\s+MAPPING\s*(?:ON|OFF)?\s*;/i,
+
   // Firebird local variable declaration: appears before BEGIN in procedure/function bodies.
   // Covers both "DECLARE VARIABLE name type;" and "DECLARE name type;" forms.
   // The VARIABLE keyword is optional (older Firebird/legacy style omits it).
@@ -27,7 +37,7 @@ export default {
   // This prevents the complex procedure body (Firebird variable assignments,
   // IF/WHILE, EXECUTE STATEMENT, triple-quote strings) from corrupting the
   // GLR parser state and causing subsequent CREATE TABLE nodes to be missed.
-  fb_proc_or_trigger: _ => /CREATE[ \t\r\n]+(?:OR[ \t\r\n]+REPLACE[ \t\r\n]+)?(?:PROCEDURE|TRIGGER|FUNCTION)(?:[^\^]|\^[^\r\n])*\^/i,
+  fb_proc_or_trigger: _ => /CREATE[ \t\r\n]+(?:OR[ \t\r\n]+(?:REPLACE|ALTER)[ \t\r\n]+)?(?:PROCEDURE|TRIGGER|FUNCTION)(?:[^\^]|\^[^\r\n])*\^/i,
 
   set_statement: $ => seq(
     $.keyword_set,
@@ -47,7 +57,13 @@ export default {
             ),
           ),
           seq($.keyword_schema, $.literal),
-          seq($.keyword_names, $.literal),
+          seq($.keyword_names, choice($.literal, $.identifier)),
+          seq($.keyword_sql, $.keyword_dialect, choice($.literal, $.identifier)),
+          // Firebird: SET GENERATOR name TO value
+          seq($.keyword_generator, $.identifier, $.keyword_to, $.literal),
+          // Firebird: SET AUTO ADMIN MAPPING [ON|OFF] — AUTO/ADMIN/MAPPING are identifiers
+          seq($.identifier, $.identifier, $.identifier,
+              optional(choice($.keyword_on, $.keyword_off))),
           seq($.keyword_time, $.keyword_zone, choice($.literal, $.keyword_local, $.keyword_default)),
           seq($.keyword_session, $.keyword_authorization, choice($.identifier, $.keyword_default)),
           seq($.keyword_role, choice($.identifier, $.keyword_none)),

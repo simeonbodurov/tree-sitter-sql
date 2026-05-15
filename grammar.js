@@ -30,6 +30,7 @@ export default grammar({
     [$.between_expression, $.binary_expression],
     [$.time],
     [$.timestamp],
+    [$.term],
   ],
 
   precedences: $ => [
@@ -56,18 +57,24 @@ export default grammar({
   rules: {
     program: $ => seq(
       // any number of transactions, statements, or blocks with a terminating ;
-      // set_term and declare_external_function are self-terminating (Firebird dialect)
+      // set_term, declare_external_function, and fb_* are self-terminating (Firebird dialect)
       // '^' is a valid statement terminator in Firebird (after SET TERM ^ ;)
       repeat(
         choice(
           $.set_term,
           $.declare_external_function,
           $.fb_proc_or_trigger,
+          $.fb_connect_statement,
+          $.fb_update_or_insert,
+          $.fb_grant_revoke,
           seq(
             choice(
               $.transaction,
               $.statement,
               $.block,
+              // Firebird: standalone COMMIT WORK / ROLLBACK WORK outside BEGIN..END
+              $._commit,
+              $._rollback,
             ),
             ';',
           ),

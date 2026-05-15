@@ -21,14 +21,14 @@ export default {
   _commit: $ => seq(
     $.keyword_commit,
     optional(
-      $.keyword_transaction,
+      choice($.keyword_transaction, $.keyword_work),
     ),
   ),
 
   _rollback: $ => seq(
     $.keyword_rollback,
     optional(
-      $.keyword_transaction,
+      choice($.keyword_transaction, $.keyword_work),
     ),
   ),
 

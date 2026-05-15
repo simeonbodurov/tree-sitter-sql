@@ -10,7 +10,7 @@ export default {
   insert: $ => seq(
     choice(
       $.keyword_insert,
-      $.keyword_replace
+      $.keyword_replace,
     ),
     optional(
       choice(

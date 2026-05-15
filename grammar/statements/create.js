@@ -40,7 +40,7 @@ export default {
       $.keyword_create,
       optional(
         choice(
-          $._temporary,
+          seq(optional($.keyword_global), $._temporary),
           $.keyword_unlogged,
           $.keyword_external,
         )
@@ -83,6 +83,10 @@ export default {
     seq($.keyword_without, $.keyword_oids),
     $.storage_parameters,
     $.table_option,
+    // Firebird: ON COMMIT PRESERVE ROWS / ON COMMIT DELETE ROWS
+    seq($.keyword_on, $.keyword_commit,
+        choice($.keyword_preserve, $.keyword_delete),
+        $.keyword_rows),
   ),
 
   stored_as: $ => seq(
@@ -317,6 +321,7 @@ export default {
   create_index: $ => seq(
     $.keyword_create,
     optional($.keyword_unique),
+    optional(choice($.keyword_ascending, $.keyword_descending, $.direction)),
     $.keyword_index,
     optional($.keyword_concurrently),
     optional(
@@ -342,7 +347,11 @@ export default {
           ),
         ),
       ),
-      $.index_fields
+      choice(
+      $.index_fields,
+      // Firebird: CREATE INDEX name ON table COMPUTED BY (expr)
+      seq($.keyword_computed, optional($.keyword_by), wrapped_in_parenthesis($._expression)),
+    ),
     ),
     optional($.covering_columns),
     optional($.tablespace),
@@ -374,14 +383,14 @@ export default {
   _with_settings: $ => seq(
         field('name', $.identifier),
         optional('='),
-        field('value', choice($.identifier, alias($._single_quote_string, $.literal))),
+        field('value', choice($.literal, $.identifier)),
   ),
 
   create_database: $ => prec.left(seq(
     $.keyword_create,
     $.keyword_database,
     optional($._if_not_exists),
-    $.identifier,
+    choice($.identifier, alias($._literal_string, $.literal)),
     optional($.keyword_with),
     repeat(
       $._with_settings
