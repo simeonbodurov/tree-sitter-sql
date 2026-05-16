@@ -6,7 +6,8 @@ selections
 
 ---
 
-(program (ERROR))
+(program
+  (ERROR))
 
 ==================
 ^selections for your perusal
@@ -16,7 +17,9 @@ selections for your perusal
 
 ---
 
-(program (ERROR (keyword_for)))
+(program
+  (ERROR
+    (keyword_for)))
 
 ==================
 ^inserted_at
@@ -26,7 +29,8 @@ inserted_at
 
 ---
 
-(program (ERROR))
+(program
+  (ERROR))
 
 ==================
 ^updated_at
@@ -36,7 +40,8 @@ updated_at
 
 ---
 
-(program (ERROR))
+(program
+  (ERROR))
 
 ==================
 ^deleted_at
@@ -46,7 +51,8 @@ deleted_at
 
 ---
 
-(program (ERROR))
+(program
+  (ERROR))
 
 ==================
 ^created_at
@@ -56,7 +62,8 @@ created_at
 
 ---
 
-(program (ERROR))
+(program
+  (ERROR))
 
 ================================================================================
 Function body with a $$ string literal with the same name
@@ -93,10 +100,11 @@ $a$
       (dollar_quote)
       (keyword_begin)
       (keyword_return)
-      (dollar_quote)
-      (keyword_text))
-    (dollar_quote)
-    (keyword_end)
+      (ERROR
+        (dollar_quote))
+      (field
+        (identifier))
+      (keyword_end))
     (dollar_quote)))
 
 ================================================================================
@@ -138,8 +146,7 @@ $c$;
         (literal)
         (keyword_end)
         (ERROR
-          (UNEXPECTED 'c')
-          (UNEXPECTED ';'))
+          (UNEXPECTED '$'))
         (MISSING dollar_quote)))))
 
 ================================================================================
@@ -179,13 +186,11 @@ $a$;
         (keyword_begin)
         (keyword_return)
         (ERROR
-          (UNEXPECTED 'b'))
+          (UNEXPECTED '$'))
         (field
           (identifier))
         (ERROR
-          (UNEXPECTED 't')
-          (keyword_text)
-          (UNEXPECTED 'b')
-          (UNEXPECTED ';'))
+          (UNEXPECTED '$')
+          (UNEXPECTED '$'))
         (keyword_end)
         (dollar_quote)))))

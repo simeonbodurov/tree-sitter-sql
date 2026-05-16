@@ -50,6 +50,8 @@ static char* add_char(char* text, size_t* text_size, char c, int index) {
   return text;
 }
 
+// Scans a full dollar-string tag starting from '$' (e.g. reads "$a$").
+// Returns the tag string, or NULL if not a valid tag.
 static char* scan_dollar_string_tag(TSLexer *lexer) {
   char* tag = NULL;
   int index = 0;
@@ -80,6 +82,34 @@ static char* scan_dollar_string_tag(TSLexer *lexer) {
   }
 }
 
+// Scans the tag name and closing '$' AFTER the opening '$' has already been
+// consumed.  Returns the full tag string (e.g. "$a$"), or NULL if there is no
+// valid closing '$' (e.g. whitespace interrupts the tag name).
+static char* scan_dollar_tag_body(TSLexer *lexer) {
+  char* tag = NULL;
+  int index = 0;
+  size_t* text_size = malloc(sizeof(size_t));
+  *text_size = 0;
+
+  tag = add_char(tag, text_size, '$', index);   // prepend the already-consumed '$'
+
+  while (lexer->lookahead != '$' && !iswspace(lexer->lookahead) && !lexer->eof(lexer)) {
+    tag = add_char(tag, text_size, lexer->lookahead, ++index);
+    lexer->advance(lexer, false);
+  }
+
+  if (lexer->lookahead == '$') {
+    tag = add_char(tag, text_size, '$', ++index);
+    lexer->advance(lexer, false);
+    free(text_size);
+    return tag;
+  } else {
+    free(tag);
+    free(text_size);
+    return NULL;
+  }
+}
+
 bool tree_sitter_sql_external_scanner_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
   LexerState *state = (LexerState*)payload;
   if (valid_symbols[DOLLAR_QUOTED_STRING_START_TAG] && state->start_tag == NULL) {
@@ -98,33 +128,38 @@ bool tree_sitter_sql_external_scanner_scan(void *payload, TSLexer *lexer, const 
     return true;
   }
 
-  if (valid_symbols[DOLLAR_QUOTED_STRING_END_TAG] && state->start_tag != NULL) {
-    while (iswspace(lexer->lookahead)) lexer->advance(lexer, true);
-
-    char* end_tag = scan_dollar_string_tag(lexer);
-    if (end_tag != NULL && strcmp(end_tag, state->start_tag) == 0) {
-      free(state->start_tag);
-      state->start_tag = NULL;
-      lexer->result_symbol = DOLLAR_QUOTED_STRING_END_TAG;
-      free(end_tag);
-      return true;
-    }
-    if (end_tag != NULL) {
-      free(end_tag);
-    }
-    return false;
-  }
-
+  // When both DOLLAR_QUOTED_STRING and DOLLAR_QUOTED_STRING_END_TAG are valid
+  // (i.e. inside a dollar-quoted function body where an embedded literal is
+  // also grammatically possible), we try DOLLAR_QUOTED_STRING first so that
+  // a tag different from the outer one (e.g. $b$ inside $a$…$a$) is consumed
+  // as a literal rather than being rejected by END_TAG.  When the scanned tag
+  // IS the outer tag we emit END_TAG directly — it has already been consumed.
+  //
+  // mark_end is called after the opening '$' so that on failure tree-sitter
+  // resets to just after '$', leaving the tag name as the first unexpected
+  // character rather than '$' itself.
   if (valid_symbols[DOLLAR_QUOTED_STRING]) {
-    lexer->mark_end(lexer);
     while (iswspace(lexer->lookahead)) lexer->advance(lexer, true);
+    if (lexer->lookahead != '$') return false;
+    lexer->advance(lexer, false);   // consume opening '$'
+    lexer->mark_end(lexer);         // reset point on failure: after opening '$'
 
-    char* start_tag = scan_dollar_string_tag(lexer);
+    char* start_tag = scan_dollar_tag_body(lexer);
     if (start_tag == NULL) {
       return false;
     }
 
     if (state->start_tag != NULL && strcmp(state->start_tag, start_tag) == 0) {
+      // This tag closes the outer dollar-quote block.  Emit END_TAG now;
+      // the full tag has been consumed so the END_TAG block below is skipped.
+      free(start_tag);
+      if (valid_symbols[DOLLAR_QUOTED_STRING_END_TAG]) {
+        free(state->start_tag);
+        state->start_tag = NULL;
+        lexer->mark_end(lexer);
+        lexer->result_symbol = DOLLAR_QUOTED_STRING_END_TAG;
+        return true;
+      }
       return false;
     }
 
@@ -153,6 +188,30 @@ bool tree_sitter_sql_external_scanner_scan(void *payload, TSLexer *lexer, const 
       free(end_tag);
       end_tag = NULL;
     }
+  }
+
+  // Standalone END_TAG path — only reached when DOLLAR_QUOTED_STRING is not
+  // valid.  Same mark_end-after-'$' convention so that on mismatch tree-sitter
+  // resets to after '$', not before it.
+  if (valid_symbols[DOLLAR_QUOTED_STRING_END_TAG] && state->start_tag != NULL) {
+    while (iswspace(lexer->lookahead)) lexer->advance(lexer, true);
+    if (lexer->lookahead != '$') return false;
+    lexer->advance(lexer, false);   // consume opening '$'
+    lexer->mark_end(lexer);         // reset point on failure: after opening '$'
+
+    char* end_tag = scan_dollar_tag_body(lexer);
+    if (end_tag != NULL && strcmp(end_tag, state->start_tag) == 0) {
+      free(state->start_tag);
+      state->start_tag = NULL;
+      lexer->mark_end(lexer);
+      lexer->result_symbol = DOLLAR_QUOTED_STRING_END_TAG;
+      free(end_tag);
+      return true;
+    }
+    if (end_tag != NULL) {
+      free(end_tag);
+    }
+    return false;
   }
 
   return false;
